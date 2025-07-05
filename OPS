@@ -1,169 +1,8 @@
-{
- "cells": [
-  {
-   "cell_type": "markdown",
-   "id": "5086404d",
-   "metadata": {},
-   "source": [
-    "# PACF Dataset Analysis\n",
-    "This notebook includes preprocessing, model training, and SHAP analysis."
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 2,
-   "id": "873b16d7",
-   "metadata": {},
-   "outputs": [
-    {
-     "name": "stdout",
-     "output_type": "stream",
-     "text": [
-      "Collecting shap\n",
-      "  Downloading shap-0.48.0-cp311-cp311-win_amd64.whl.metadata (25 kB)\n",
-      "Requirement already satisfied: numpy in d:\\modelling\\.conda\\lib\\site-packages (from shap) (1.26.4)\n",
-      "Requirement already satisfied: scipy in d:\\modelling\\.conda\\lib\\site-packages (from shap) (1.11.4)\n",
-      "Requirement already satisfied: scikit-learn in d:\\modelling\\.conda\\lib\\site-packages (from shap) (1.4.2)\n",
-      "Requirement already satisfied: pandas in d:\\modelling\\.conda\\lib\\site-packages (from shap) (2.1.4)\n",
-      "Requirement already satisfied: tqdm>=4.27.0 in d:\\modelling\\.conda\\lib\\site-packages (from shap) (4.67.1)\n",
-      "Requirement already satisfied: packaging>20.9 in d:\\modelling\\.conda\\lib\\site-packages (from shap) (24.2)\n",
-      "Collecting slicer==0.0.8 (from shap)\n",
-      "  Using cached slicer-0.0.8-py3-none-any.whl.metadata (4.0 kB)\n",
-      "Requirement already satisfied: numba>=0.54 in d:\\modelling\\.conda\\lib\\site-packages (from shap) (0.60.0)\n",
-      "Requirement already satisfied: cloudpickle in d:\\modelling\\.conda\\lib\\site-packages (from shap) (3.1.0)\n",
-      "Requirement already satisfied: typing-extensions in d:\\modelling\\.conda\\lib\\site-packages (from shap) (4.13.2)\n",
-      "Requirement already satisfied: llvmlite<0.44,>=0.43.0dev0 in d:\\modelling\\.conda\\lib\\site-packages (from numba>=0.54->shap) (0.43.0)\n",
-      "Requirement already satisfied: colorama in d:\\modelling\\.conda\\lib\\site-packages (from tqdm>=4.27.0->shap) (0.4.6)\n",
-      "Requirement already satisfied: python-dateutil>=2.8.2 in d:\\modelling\\.conda\\lib\\site-packages (from pandas->shap) (2.9.0.post0)\n",
-      "Requirement already satisfied: pytz>=2020.1 in d:\\modelling\\.conda\\lib\\site-packages (from pandas->shap) (2024.2)\n",
-      "Requirement already satisfied: tzdata>=2022.1 in d:\\modelling\\.conda\\lib\\site-packages (from pandas->shap) (2024.2)\n",
-      "Requirement already satisfied: joblib>=1.2.0 in d:\\modelling\\.conda\\lib\\site-packages (from scikit-learn->shap) (1.3.2)\n",
-      "Requirement already satisfied: threadpoolctl>=2.0.0 in d:\\modelling\\.conda\\lib\\site-packages (from scikit-learn->shap) (3.5.0)\n",
-      "Requirement already satisfied: six>=1.5 in d:\\modelling\\.conda\\lib\\site-packages (from python-dateutil>=2.8.2->pandas->shap) (1.17.0)\n",
-      "Downloading shap-0.48.0-cp311-cp311-win_amd64.whl (544 kB)\n",
-      "   ---------------------------------------- 0.0/544.4 kB ? eta -:--:--\n",
-      "   ---------------------------------------- 0.0/544.4 kB ? eta -:--:--\n",
-      "   ------------------- -------------------- 262.1/544.4 kB ? eta -:--:--\n",
-      "   -------------------------------------- 544.4/544.4 kB 860.6 kB/s eta 0:00:00\n",
-      "Using cached slicer-0.0.8-py3-none-any.whl (15 kB)\n",
-      "Installing collected packages: slicer, shap\n",
-      "Successfully installed shap-0.48.0 slicer-0.0.8\n",
-      "Note: you may need to restart the kernel to use updated packages.\n"
-     ]
-    }
-   ],
-   "source": [
-    "pip install shap --index-url https://pypi.org/simple"
-   ]
-  },
-  {
-   "cell_type": "code",
-   "execution_count": 1,
-   "id": "cb5317c0",
-   "metadata": {},
-   "outputs": [
-    {
-     "data": {
-      "text/html": [
-       "<div>\n",
-       "<style scoped>\n",
-       "    .dataframe tbody tr th:only-of-type {\n",
-       "        vertical-align: middle;\n",
-       "    }\n",
-       "\n",
-       "    .dataframe tbody tr th {\n",
-       "        vertical-align: top;\n",
-       "    }\n",
-       "\n",
-       "    .dataframe thead th {\n",
-       "        text-align: right;\n",
-       "    }\n",
-       "</style>\n",
-       "<table border=\"1\" class=\"dataframe\">\n",
-       "  <thead>\n",
-       "    <tr style=\"text-align: right;\">\n",
-       "      <th></th>\n",
-       "      <th>GO (%)</th>\n",
-       "      <th>Steel Fiber (%)</th>\n",
-       "      <th>SWM Dia (mm)</th>\n",
-       "      <th>Trial</th>\n",
-       "      <th>Initial Crack Load (kN)</th>\n",
-       "      <th>Final Crack Load (kN)</th>\n",
-       "    </tr>\n",
-       "  </thead>\n",
-       "  <tbody>\n",
-       "    <tr>\n",
-       "      <th>0</th>\n",
-       "      <td>0.0</td>\n",
-       "      <td>0</td>\n",
-       "      <td>0</td>\n",
-       "      <td>Trial 1</td>\n",
-       "      <td>4</td>\n",
-       "      <td>5</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>1</th>\n",
-       "      <td>0.0</td>\n",
-       "      <td>0</td>\n",
-       "      <td>0</td>\n",
-       "      <td>Trial 2</td>\n",
-       "      <td>4</td>\n",
-       "      <td>5</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>2</th>\n",
-       "      <td>0.0</td>\n",
-       "      <td>0</td>\n",
-       "      <td>50</td>\n",
-       "      <td>Trial 1</td>\n",
-       "      <td>3</td>\n",
-       "      <td>5</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>3</th>\n",
-       "      <td>0.0</td>\n",
-       "      <td>0</td>\n",
-       "      <td>50</td>\n",
-       "      <td>Trial 2</td>\n",
-       "      <td>7</td>\n",
-       "      <td>8</td>\n",
-       "    </tr>\n",
-       "    <tr>\n",
-       "      <th>4</th>\n",
-       "      <td>0.0</td>\n",
-       "      <td>0</td>\n",
-       "      <td>100</td>\n",
-       "      <td>Trial 1</td>\n",
-       "      <td>8</td>\n",
-       "      <td>10</td>\n",
-       "    </tr>\n",
-       "  </tbody>\n",
-       "</table>\n",
-       "</div>"
-      ],
-      "text/plain": [
-       "   GO (%)  Steel Fiber (%)  SWM Dia (mm)    Trial  Initial Crack Load (kN)  \\\n",
-       "0     0.0                0             0  Trial 1                        4   \n",
-       "1     0.0                0             0  Trial 2                        4   \n",
-       "2     0.0                0            50  Trial 1                        3   \n",
-       "3     0.0                0            50  Trial 2                        7   \n",
-       "4     0.0                0           100  Trial 1                        8   \n",
-       "\n",
-       "   Final Crack Load (kN)  \n",
-       "0                      5  \n",
-       "1                      5  \n",
-       "2                      5  \n",
-       "3                      8  \n",
-       "4                     10  "
-      ]
-     },
-     "execution_count": 1,
-     "metadata": {},
-     "output_type": "execute_result"
-    }
-   ],
-   "source": [
-    "\n",
+# ======================
+# PACF Dataset Analysis
+# ======================
+# This notebook includes preprocessing, model training, and SHAP analysis.
+
 # Install required libraries (run only once)
 # pip install pycaret shap matplotlib seaborn pandas scikit-learn
 
@@ -176,14 +15,14 @@ from pycaret.regression import *
 # Load the dataset
 df = pd.read_csv("EGC_Lightweight_Data.csv")
 
-# List of target variables to train models for
+# Define target variables
 targets = ['Stress', 'Split', 'Flexure', 'Sorptivity']
 
-# Iterate through each target property
+# Loop through each target for individual regression modeling and SHAP analysis
 for target in targets:
     print(f"\n\n=========== MODEL TRAINING FOR: {target} ===========\n")
 
-    # Set up PyCaret for this target
+    # Initialize PyCaret setup
     reg = setup(
         data=df,
         target=target,
@@ -195,24 +34,34 @@ for target in targets:
         verbose=False
     )
 
-    # Compare all models and select the best
+    # Compare models and select the best one
     best_model = compare_models()
-    
-    # Evaluate model
+
+    # Evaluate model visually
     evaluate_model(best_model)
-    
-    # Plot Feature Importance
+
+    # Plot feature importance
     print(f"\nFeature importance for {target}:")
     plot_model(best_model, plot='feature')
 
-    # Predict on full data for SHAP
-    X = df.drop(columns=[target])
-    print(f"\nGenerating SHAP analysis for {target}...")
-    explainer = shap.Explainer(best_model.predict, X)
-    shap_values = explainer(X)
-    shap.summary_plot(shap_values, X)
+    # Prepare data for SHAP
+    features = df.drop(columns=[target])
+    y_true = df[target]
 
-    # Residual plot
+    print(f"\nGenerating SHAP analysis for {target}...")
+
+    # Convert features to NumPy for SHAP (required for predict function)
+    X_sample = features.copy()
+    X_sample = pd.get_dummies(X_sample)
+
+    try:
+        explainer = shap.Explainer(best_model.predict, X_sample)
+        shap_values = explainer(X_sample)
+        shap.summary_plot(shap_values, X_sample, show=True)
+    except Exception as e:
+        print(f"SHAP analysis failed for {target}. Error: {e}")
+
+    # Plot residuals
     print(f"\nResidual plot for {target}:")
     plot_model(best_model, plot='residuals')
 
@@ -220,6 +69,7 @@ for target in targets:
     print(f"\nLearning curve for {target}:")
     plot_model(best_model, plot='learning')
 
-    # Print R2, RMSE, MAE
+    # Model predictions
     predictions = predict_model(best_model)
+    print(f"\nActual vs Predicted for {target}:")
     print(predictions[[target, 'Label']].head())
